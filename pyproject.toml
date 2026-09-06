@@ -6,14 +6,20 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "apify-client[httpx2]>=3.2.0",
+    "boto3>=1.43.89",
     "firecrawl>=4.41.0",
     "firecrawl-py>=4.41.0",
     "httpx>=0.28.1",
     "instaloader>=4.15.3",
     "ipykernel>=7.3.0",
+    "langchain-aws>=1.7.5",
     "langchain-community>=0.4.2",
+    "langchain-postgres>=0.0.17",
     "markdown>=3.10.3",
+    "pgvector>=0.3.6",
+    "psycopg[binary]>=3.3.5",
     "python-dotenv>=1.2.3",
+    "rank-bm25>=0.2.2",
     "requests>=2.34.2",
     "unstructured>=0.27.5",
 ]
