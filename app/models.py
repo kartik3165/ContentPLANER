@@ -37,3 +37,10 @@ class WebsiteDataEmbedding(SQLModel, table=True):
     model_id: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
     chunk: WebsiteDataChunks = Relationship(back_populates="embeddings")
+
+class CrawledSource(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    source_url: str = Field(unique=True, index=True)
+    source_type: str
+    chunks_count: int = 0
+    created_at: datetime = Field(default_factory=datetime.utcnow)
