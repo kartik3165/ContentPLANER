@@ -6,7 +6,7 @@ from app.database import async_session_maker
 from app.models import InstagramPost, CrawledSource
 from app.services.crawl_service import source_exists, record_source
 from app.services.job_store import update_job
-
+from app.settings import Settings
 
 async def get_insta_account_info(
         user_name: str,
@@ -49,3 +49,30 @@ async def store_instagram_data(
         await session.commit()
 
         return len(posts)
+
+async def process_instagram_job(
+        job_id: str,
+        username: str,
+    ):
+    try:
+        if await source_exists(username, "instagram"):
+            update_job(
+                job_id, 
+                status="already_exists",
+                chunks_created=0
+            )
+            return 
+        data = await get_insta_account_info(username, Settings.apify_api)
+        if not data:
+            update_job(job_id, status="failed")
+            return
+        count = await store_instagram_data(username, data)
+        await record_source(username, "instagram", count)
+        update_job(
+            job_id,
+            status="completed",
+            chunks_created=count
+        )
+    except Exception:
+        update_job(job_id, status="failed")
+        raise
