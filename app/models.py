@@ -1,16 +1,21 @@
-from sqlmodel import Field, SQLModel, Relationship
-from datetime import datetime, date
-from pgvector.sqlalchemy import Vector
-from enum import Enum
+from datetime import date, datetime
+from enum import StrEnum
 
-class PostOwnerType(str, Enum):
-    OWN = "own",
+from pgvector.sqlalchemy import Vector
+from sqlmodel import Field, Relationship, SQLModel
+
+
+class PostOwnerType(StrEnum):
+    OWN = "own"
     COMPETITION = "competition"
+
 
 class InstagramPost(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    PostOwnerType: PostOwnerType = Field(default=PostOwnerType.OWN) # type: ignore
-    owner_username:str = Field(default="", index=True)
+    post_owner_type: PostOwnerType = Field(
+        default=PostOwnerType.OWN, sa_column_kwargs={"name": "PostOwnerType"}
+    )  # type: ignore
+    owner_username: str = Field(default="", index=True)
     postType: str = Field(default="")
     caption: str = Field(default="")
     hashtags: str = Field(default="")
@@ -19,34 +24,41 @@ class InstagramPost(SQLModel, table=True):
     likesCount: int = Field(default=0)
     videoViewCount: int = Field(default=0)
     displayUrl: str = Field(default="")
-    altText: str =  Field(default="")
+    altText: str = Field(default="")
     childPosts: str = Field(default="")
     engagement_score: float = Field(default=0.0, index=True)
 
+
 class WebsiteDataChunks(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    source_file: str
+    source_file: str = Field(index=True)
     owner: str = Field(default="own", index=True)
     chunk_index: int
     content: str
     metadata_json: str | None = Field(default=None)
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    embeddings: list["WebsiteDataEmbedding"] = Relationship(back_populates="chunk")
+    embeddings: list["WebsiteDataEmbedding"] = Relationship(
+        back_populates="chunk",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+    )
+
 
 class WebsiteDataEmbedding(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    chunk_id: int = Field(foreign_key="WebsiteDataChunks.id")
-    embedding: list[float] = Field(sa_type=Vector(1024)) # type: ignore
-    model_id: str
+    chunk_id: int = Field(foreign_key="websitedatachunks.id", index=True)
+    embedding: list[float] = Field(sa_type=Vector(1024))  # type: ignore
+    model_id: str = Field(default="amazon.titan-embed-text-v2:0")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     chunk: WebsiteDataChunks = Relationship(back_populates="embeddings")
+
 
 class CrawledSource(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     source_url: str = Field(unique=True, index=True)
-    source_type: str
-    chunks_count: int = 0
+    source_type: str = Field(index=True)
+    chunks_count: int = Field(default=0)
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
 
 class Competitor(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
@@ -54,10 +66,10 @@ class Competitor(SQLModel, table=True):
     website_url: str | None = Field(default=None, index=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
+
 class ContentPlan(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     start_date: date
     num_days: int
     plan_json: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
-

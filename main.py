@@ -1,14 +1,22 @@
-from datetime import date, timedelta
-import httpx
 import asyncio
-from dotenv import load_dotenv
 import os
+from datetime import date, timedelta
+
+import httpx
+from dotenv import load_dotenv
 
 load_dotenv()
 
 cal_api = os.getenv("CALENDARIFIC_API_KEY")
 
-async def get_festival(api_key: str, start_date: date = date.today(), end_date_days :int = 6) -> list:
+
+async def get_festival(
+    api_key: str,
+    start_date: date | None = None,
+    end_date_days: int = 6,
+) -> list:
+    if start_date is None:
+        start_date = date.today()
     country = "IN"
     year = start_date.year
     end_date = start_date + timedelta(days=end_date_days)
@@ -22,7 +30,7 @@ async def get_festival(api_key: str, start_date: date = date.today(), end_date_d
                 "api_key": api_key,
                 "country": country,
                 "year": year,
-            }
+            },
         )
 
         all_holidays.raise_for_status()
@@ -30,24 +38,22 @@ async def get_festival(api_key: str, start_date: date = date.today(), end_date_d
     holidays = all_holidays.json()["response"]["holidays"]
 
     for week_holidays in holidays:
-        holiday_date = date.fromisoformat(
-            week_holidays["date"]["iso"]
-        )
+        holiday_date = date.fromisoformat(week_holidays["date"]["iso"])
 
         if start_date <= holiday_date <= end_date:
-            festival_dates.append({
-                "name": week_holidays["name"],
-                "date": week_holidays["date"]["iso"],
-                "description": week_holidays["description"]
-            })
+            festival_dates.append(
+                {
+                    "name": week_holidays["name"],
+                    "date": week_holidays["date"]["iso"],
+                    "description": week_holidays["description"],
+                }
+            )
 
     return festival_dates
 
 
 async def main():
-    print(await get_festival(
-        api_key=cal_api,
-        end_date_days=25
-    ))
+    print(await get_festival(api_key=cal_api, end_date_days=25))
+
 
 asyncio.run(main())

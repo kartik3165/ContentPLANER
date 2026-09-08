@@ -20,9 +20,31 @@ dependencies = [
     "pgvector>=0.3.6",
     "psycopg[binary]>=3.3.5",
     "pydantic>=2.13.5",
+    "pydantic-settings>=2.0.0",
     "python-dotenv>=1.2.3",
+    "streamlit>=1.45.0",
     "rank-bm25>=0.2.2",
     "requests>=2.34.2",
     "sqlmodel>=0.0.42",
     "unstructured>=0.27.5",
 ]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.16.6",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+exclude = ["notebooks", ".venv", ".git", "__pycache__"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "C4", "UP", "RUF"]
+ignore = ["N999"]
+
+[tool.ruff.lint.per-file-ignores]
+"streamlit_app/pages/*.py" = ["N999", "DTZ011"]
+"app/services/festival.py" = ["DTZ011"]
+"app/services/prompts.py" = ["E501"]
+"alembic/env.py" = ["F401"]
