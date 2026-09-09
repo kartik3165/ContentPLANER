@@ -11,8 +11,9 @@ from app.services.prompts import SYSTEM_PROMPT, USER_PROMPT_TEMPLATE
 from app.services.service_filter import get_service_chunks
 
 _llm = ChatBedrock(
-    model_id="meta.llama3-8b-instruct-v1:0",
+    model="apac.amazon.nova-lite-v1:0",
     region_name="ap-south-1",
+    beta_use_converse_api=True,
     max_tokens=4096,
     temperature=0.2,
 )
@@ -20,9 +21,18 @@ _llm = ChatBedrock(
 
 async def build_context(top_k: int = 10, chunk_k: int = 15) -> str:
     comp_posts = await get_top_competitor_posts(top_k)
-    own_posts = await get_own_posts(5)
-    chunks = await get_service_chunks(chunk_k)
-    lines = ["== TOP COMPETITOR POSTS (by engagement_score) =="]
+    own_posts = await get_own_posts(top_k)
+    own_chunks = await get_service_chunks(chunk_k, owners=["own"])
+    competitor_chunks = await get_service_chunks(chunk_k, owners=["competition"])
+    lines = ["== OWN INSTAGRAM POSTS (by engagement_score) =="]
+    for p in own_posts:
+        lines.append(
+            f"- @{p.owner_username} score={p.engagement_score:.1f} "
+            f"likes={p.likesCount} comments={p.commentsCount} "
+            f"views={p.videoViewCount}\n"
+            f"  caption: {p.caption[:500]}\n  hashtags: {p.hashtags}\n  url: {p.postUrl}"
+        )
+    lines.append("\n== TOP COMPETITOR INSTAGRAM POSTS (by engagement_score) ==")
     for p in comp_posts:
         lines.append(
             f"- @{p.owner_username} score={p.engagement_score:.1f} "
@@ -30,11 +40,11 @@ async def build_context(top_k: int = 10, chunk_k: int = 15) -> str:
             f"views={p.videoViewCount}\n"
             f"  caption: {p.caption[:500]}\n  hashtags: {p.hashtags}\n  url: {p.postUrl}"
         )
-    lines.append("\n== OWN POSTS ==")
-    for p in own_posts:
-        lines.append(f"- caption: {p.caption[:300]} | likes={p.likesCount}")
-    lines.append("\n== SERVICE CHUNKS (own + competitor sites) ==")
-    for c in chunks:
+    lines.append("\n== HAVE IN OWN PORTFOLIO: OWN WEBSITE CHUNKS ==")
+    for c in own_chunks:
+        lines.append(f"- [{c['owner']}] {c['source']}: {c['content'][:800]}")
+    lines.append("\n== NOT IN OWN PORTFOLIO: COMPETITOR WEBSITE CHUNKS ==")
+    for c in competitor_chunks:
         lines.append(f"- [{c['owner']}] {c['source']}: {c['content'][:800]}")
     return "\n".join(lines)
 

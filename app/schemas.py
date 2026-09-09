@@ -1,4 +1,5 @@
 from datetime import date
+
 from pydantic import BaseModel, HttpUrl
 
 
@@ -6,6 +7,7 @@ class CrawlRequest(BaseModel):
     owner: str = "own"
     url: HttpUrl
     limit: int = 10
+    refresh: bool = False
 
 
 class CrawlResponse(BaseModel):
@@ -25,6 +27,7 @@ class JobStatusResponse(BaseModel):
 class InstagramRequest(BaseModel):
     username: str
     owner_type: str = "own"
+    refresh: bool = False
 
 
 class CompetitorCreate(BaseModel):

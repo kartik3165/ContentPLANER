@@ -1,32 +1,69 @@
+import asyncio
+import sys
+from pathlib import Path
+
 import streamlit as st
+from sqlalchemy import func
+from sqlmodel import select
 
-st.set_page_config(page_title="ContentPlan", page_icon=":material/edit_note:", layout="wide")
-st.title("ContentPlan")
-st.markdown("Use the sidebar pages to Crawl Site, Scrape Instagram, or Search.")
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
-c1, c2, c3 = st.columns(3)
-with c1:
-    st.markdown("### :material/language: Crawl Site")
-    st.page_link("pages/1_Crawl_Site.py", label="Go to Crawl Site")
-with c2:
-    st.markdown("### :material/photo_camera: Instagram")
-    st.page_link("pages/2_Instagram.py", label="Go to Instagram")
-with c3:
-    st.markdown("### :material/search: Search")
-    st.page_link("pages/3_Search.py", label="Go to Search")
+from app.database import async_session_maker  # noqa: E402
+from app.models import CrawledSource, InstagramPost, WebsiteDataChunks  # noqa: E402
 
-c4, c5 = st.columns(2)
-with c4:
-    st.markdown("### :material/group: Competitors")
-    st.page_link("pages/4_Competitors.py", label="Manage Competitors")
-with c5:
-    st.markdown("### :material/calendar_month: Content Plan")
-    st.page_link("pages/5_Content_Plan.py", label="Generate Plan")
+st.set_page_config(
+    page_title="ContentPlan Dashboard", page_icon=":material/dashboard:", layout="wide"
+)
+st.title(":material/dashboard: ContentPlan")
+st.caption("One workspace for source intelligence, portfolio gaps, and content planning.")
 
-c6, c7 = st.columns(2)
-with c6:
-    st.markdown("### :material/description: Scraped Website Data")
-    st.page_link("pages/6_Scraped_Website.py", label="View Website Data")
-with c7:
-    st.markdown("### :material/photo_library: Scraped Instagram Data")
-    st.page_link("pages/7_Scraped_Instagram.py", label="View Instagram Data")
+
+async def load_metrics() -> dict[str, int]:
+    async with async_session_maker() as session:
+        websites = await session.execute(
+            select(func.count(CrawledSource.id)).where(CrawledSource.source_type == "website")
+        )
+        instagram = await session.execute(select(func.count(InstagramPost.id)))
+        own_chunks = await session.execute(
+            select(func.count(WebsiteDataChunks.id)).where(WebsiteDataChunks.owner == "own")
+        )
+        competitor_chunks = await session.execute(
+            select(func.count(WebsiteDataChunks.id)).where(
+                WebsiteDataChunks.owner == "competition"
+            )
+        )
+        return {
+            "websites": websites.scalar_one(),
+            "instagram": instagram.scalar_one(),
+            "own_chunks": own_chunks.scalar_one(),
+            "competitor_chunks": competitor_chunks.scalar_one(),
+        }
+
+
+metrics = asyncio.run(load_metrics())
+cards = st.columns(4)
+cards[0].metric("Websites scraped", metrics["websites"])
+cards[1].metric("Instagram posts", metrics["instagram"])
+cards[2].metric("Own portfolio content", metrics["own_chunks"])
+cards[3].metric("Competitor website content", metrics["competitor_chunks"])
+
+st.divider()
+st.subheader("Workflow")
+workflow = st.columns(4)
+workflow[0].page_link(
+    "pages/1_Social_Sources.py", label="1. Social sources", icon=":material/public:"
+)
+workflow[1].page_link("pages/2_Competitors.py", label="2. Competitors", icon=":material/groups:")
+workflow[2].page_link(
+    "pages/3_Portfolio.py", label="3. Portfolio", icon=":material/inventory_2:"
+)
+workflow[3].page_link(
+    "pages/4_Content_Plan.py", label="4. Generate plan", icon=":material/calendar_month:"
+)
+
+st.info(
+    "Scrape your website and Instagram first. Add competitor sources next. "
+    "The plan generator combines both datasets and uses competitor services only for comparison."
+)

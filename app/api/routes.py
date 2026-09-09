@@ -25,7 +25,9 @@ router = APIRouter()
 async def crawl_endpoint(req: CrawlRequest, background_tasks: BackgroundTasks):
     job_id = str(uuid.uuid4())
     create_job(job_id, str(req.url))
-    background_tasks.add_task(process_crawl_job, job_id, str(req.url), req.limit, req.owner)
+    background_tasks.add_task(
+        process_crawl_job, job_id, str(req.url), req.limit, req.owner, req.refresh
+    )
     return CrawlResponse(
         job_id=job_id, source_url=str(req.url), status="processing", chunks_created=0
     )
@@ -36,7 +38,7 @@ async def instagram_endpoint(req: InstagramRequest, background_tasks: Background
     job_id = str(uuid.uuid4())
     create_job(job_id, req.username)
     owner_type = PostOwnerType.COMPETITION if req.owner_type == "competition" else PostOwnerType.OWN
-    background_tasks.add_task(process_instagram_job, job_id, req.username, owner_type)
+    background_tasks.add_task(process_instagram_job, job_id, req.username, owner_type, req.refresh)
     return CrawlResponse(
         job_id=job_id, source_url=req.username, status="processing", chunks_created=0
     )
